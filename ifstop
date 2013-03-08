@@ -24,16 +24,39 @@
         * python 2.4 (default Centos 5)
         * no non-standart dependences
 '''
-import os,sys
-
-SYS_NET_PATH='/sys/class/net'
+import os,sys,time
 
 class Stats(dict):
-    def __init__(self,path):
+    def __init__(self,scan_path):
         dict.__init__(self)
+        errors=[
+            "collisions",
+            "rx_crc_errors", 
+            "rx_dropped", 
+            "rx_errors", 
+            "rx_fifo_errors", 
+            "rx_frame_errors", 
+            "rx_length_errors",    
+            "rx_missed_errors",
+            "rx_over_errors",
+            "tx_aborted_errors",
+            "tx_carrier_errors",
+            "tx_dropped",
+            "tx_errors",
+            "tx_fifo_errors",
+            "tx_heartbeat_errors",
+            "tx_window_errors"
+        ] #all them are displayed as 'errors'
+        stat2int=lambda f:int(open(os.path.join(scan_path,'statistics',f)).read().strip())
+        self['errors']=sum(map(stat2int, errors))
+        self['rx']=stat2int('rx_bytes')
+        self['tx']=stat2int('tx_bytes')
+        self['rxp']=stat2int('rx_packets')
+        self['txp']=stat2int('tx_packets')
 
-    def __xsub__(self):
-        return self
+    def __sub__(self,second):
+        return dict((key,self[key]-second[key]) for key in self.iterkeys())
+
 
 class IF():
     def __init__(self, path,name):
@@ -43,39 +66,57 @@ class IF():
         self.new=True
 
     def tick(self):
-        new_raw=Stats(os.path.join(self.path,self.name))
-        if not self.new:
-            self.stats=self.raw-new_raw
+        try:
+            new_raw=Stats(os.path.join(self.path,self.name))
+            if hasattr(self,'raw'):
+                self.stats=new_raw-self.raw
+                self.new=False
             self.raw=new_raw
-            self.new=False
+        except IOError:
+            print self.name, "disappear"
+            self.vanished=True #no stats - no interface
 
-    def boot(self):
+    def bool(self):
         return self.vanished
 
-    def result(self):
-        pass
-
+    def result(self,tick=1):
+        print self, '\t',
+        if not self.new:
+            for field in "errors","tx","tx","txp", "rxp":
+                print "\t", self.stats[field],
+        else:
+            print "new interface (gathering)",
+        if self.vanished:
+            print "VANISHED",
+        print ""
+            
     def __str__(self):
         return self.name
 
 class Ifaces(list):
     def __init__(self,sys_path='/sys/class/net'):
+        list.__init__(self)
         self.sys_path=sys_path
         self.rescan()
-        list.__init__(self)
 
     def rescan(self):
+#       map(self.remove,filter(bool, self))
        d=os.listdir(self.sys_path)
-       map(self.remove,filter(bool, self))
-       new_ifaces=set(d)-set(self)
-       to_rescan=set(self) & set(d)
+       new_ifaces=set(map(str,d))-set(map(str,self))
        if new_ifaces:
-            print "New interfaces:", new_ifaces
             map (self.append, map(lambda i: IF(self.sys_path,i), new_ifaces))
        map(IF.tick,self)
 
+    def dump(self,tick=1):
+        print "\x1Bc"
+        map(IF.result,self)
+
 def main():
     ifaces=Ifaces()
+    while 1:
+        ifaces.dump()
+        time.sleep (1);
+        ifaces.rescan()
 
 if __name__ == "__main__":
         main()
