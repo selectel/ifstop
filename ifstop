@@ -1,0 +1,82 @@
+#!/usr/bin/python
+
+#    (c) Selectel, 2013
+#    by George Shuklin
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+'''
+    display top of interfaces in system
+
+    Note: this utility designed to be portable:
+        * single file to execute
+        * python 2.4 (default Centos 5)
+        * no non-standart dependences
+'''
+import os,sys
+
+SYS_NET_PATH='/sys/class/net'
+
+class Stats(dict):
+    def __init__(self,path):
+        dict.__init__(self)
+
+    def __xsub__(self):
+        return self
+
+class IF():
+    def __init__(self, path,name):
+        self.path=path
+        self.name=name
+        self.vanished=False
+        self.new=True
+
+    def tick(self):
+        new_raw=Stats(os.path.join(self.path,self.name))
+        if not self.new:
+            self.stats=self.raw-new_raw
+            self.raw=new_raw
+            self.new=False
+
+    def boot(self):
+        return self.vanished
+
+    def result(self):
+        pass
+
+    def __str__(self):
+        return self.name
+
+class Ifaces(list):
+    def __init__(self,sys_path='/sys/class/net'):
+        self.sys_path=sys_path
+        self.rescan()
+        list.__init__(self)
+
+    def rescan(self):
+       d=os.listdir(self.sys_path)
+       map(self.remove,filter(bool, self))
+       new_ifaces=set(d)-set(self)
+       to_rescan=set(self) & set(d)
+       if new_ifaces:
+            print "New interfaces:", new_ifaces
+            map (self.append, map(lambda i: IF(self.sys_path,i), new_ifaces))
+       map(IF.tick,self)
+
+def main():
+    ifaces=Ifaces()
+
+if __name__ == "__main__":
+        main()
+
