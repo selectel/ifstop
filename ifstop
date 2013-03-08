@@ -24,7 +24,7 @@
         * python 2.4 (default Centos 5)
         * no non-standart dependences
 '''
-import os,sys,time
+import os,sys,time,stat
 
 class Stats(dict):
     def __init__(self,scan_path):
@@ -101,7 +101,7 @@ class Ifaces(list):
 
     def rescan(self):
 #       map(self.remove,filter(bool, self))
-       d=os.listdir(self.sys_path)
+       d=[f for f in os.listdir(self.sys_path) if stat.S_ISDIR(os.stat(os.path.join(self.sys_path,f)).st_mode)] 
        new_ifaces=set(map(str,d))-set(map(str,self))
        if new_ifaces:
             map (self.append, map(lambda i: IF(self.sys_path,i), new_ifaces))
