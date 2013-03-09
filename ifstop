@@ -25,6 +25,7 @@
         * no non-standart dependences
 '''
 import os,sys,time,stat
+import curses
 
 class Stats(dict):
     def __init__(self,scan_path):
@@ -79,19 +80,26 @@ class IF:
     def bool(self):
         return self.vanished
 
-    def result(self,tick=1):
-        print str(self).ljust(10), '\t',
+    def result(self,screen,tick=1):
+        screen.addstr(str(self).ljust(10)+'\t')
         if not self.new:
             for field in "errors","tx","tx","txp", "rxp":
-                print str(self.stats[field]).ljust(12),
+                screen.addstr(str(self.stats[field]).ljust(12))
         else:
-            print "new interface (gathering)",
+            screen.addstr("new interface (gathering)")
         if self.vanished:
-            print "VANISHED",
-        print ""
+            screen.addstr("VANISHED")
+        screen.addstr('\n')
             
     def __str__(self):
         return self.name
+
+    def cmp_keys(self,key):
+        if not self.new:
+            return self.stats[key]
+        else:
+            return -1
+        
 
 class Ifaces(list):
     def __init__(self,sys_path='/sys/class/net'):
@@ -107,17 +115,23 @@ class Ifaces(list):
             map (self.append, map(lambda i: IF(self.sys_path,i), new_ifaces))
        map(IF.tick,self)
 
-    def dump(self,tick=1):
-        print "\x1Bc"
-        map(IF.result,self)
+    def dump(self,screen,tick=1):
+        screen.clear()
+        screen.addstr("interface")
+        for item in ['errors','TX (bytes)', 'RX (bytes)','TX (packets)', 'RX (packets)']:
+            screen.addstr(item.ljust(12))
+        screen.addstr('\n')
+        list.sort(self,key=lambda x: x.cmp_keys('rxp'),reverse=True)
+        map(lambda x: IF.result(x,screen),self)
+        screen.refresh()
 
-def main():
+def main(stdscr):
     ifaces=Ifaces()
     while 1:
-        ifaces.dump()
+        ifaces.dump(stdscr)
         time.sleep (1);
         ifaces.rescan()
 
 if __name__ == "__main__":
-        main()
+        curses.wrapper(main)
 
