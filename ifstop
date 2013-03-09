@@ -22,7 +22,7 @@
     Note: this utility designed to be portable:
         * single file to execute
         * python 2.4 (default Centos 5)
-        * no non-standart dependences
+        * no non-standart dependencies
 '''
 import os,sys,time,stat
 import curses
@@ -116,21 +116,34 @@ class Ifaces(list):
        map(IF.tick,self)
 
     def dump(self,screen,tick=1):
+        list.sort(self,key=lambda x: x.cmp_keys('rxp'),reverse=True)
         screen.clear()
-        screen.addstr("interface")
+        screen.addstr("iface")
         for item in ['errors','TX (bytes)', 'RX (bytes)','TX (packets)', 'RX (packets)']:
             screen.addstr(item.ljust(12))
         screen.addstr('\n')
-        list.sort(self,key=lambda x: x.cmp_keys('rxp'),reverse=True)
-        map(lambda x: IF.result(x,screen),self)
+        for i in self:
+            IF.result(i,screen)
         screen.refresh()
+
+def sleepkey(screen):
+    '''
+        return tuple of key (key or -1 if no key) and actual wait time (in seconds)
+    '''
+    before=time.time()
+    key=screen.getch()
+    after=time.time()
+    return (key,after-before)
 
 def main(stdscr):
     curses.use_default_colors()
+    stdscr.timeout(1000)
     ifaces=Ifaces()
     while 1:
-        ifaces.dump(stdscr)
-        time.sleep (1);
+        (key,delay)=sleepkey(stdscr)
+        if delay < 0.001:
+            delay=0.001
+        ifaces.dump(stdscr,tick=delay)
         ifaces.rescan()
 
 if __name__ == "__main__":
