@@ -24,8 +24,20 @@
         * python 2.4 (default Centos 5)
         * no non-standart dependencies
 '''
-import os,sys,time,stat
+import os,sys,stat
+import time
 import curses
+
+def make_k (n,scale=1000, force_high=False):
+    '''
+        return human-like view, supports k & M
+    '''
+    if n < 10*scale and not force_high:
+        return str(n)
+    if  n < 100*scale*scale:
+        return str(n/scale)+' k'
+    return str(n/scale/scale)+' M'
+
 
 class Stats(dict):
     def __init__(self,scan_path):
@@ -47,7 +59,7 @@ class Stats(dict):
             "tx_fifo_errors",
             "tx_heartbeat_errors",
             "tx_window_errors"
-        ] #all them are displayed as 'errors'
+        ] #all them are counted in 'errors' column
         stat2int=lambda f:int(open(os.path.join(scan_path,'statistics',f)).read().strip())
         self['errors']=sum(map(stat2int, errors))
         self['rx']=stat2int('rx_bytes')
@@ -81,10 +93,10 @@ class IF:
         return self.vanished
 
     def result(self,screen,tick=1):
-        screen.addstr(str(self).ljust(10)+'\t')
+        screen.addstr(str(self).ljust(13))
         if not self.new:
-            for field in "errors","tx","tx","txp", "rxp":
-                screen.addstr(str(self.stats[field]).ljust(12))
+            for field in "errors","tx","rx","txp", "rxp":
+                screen.addstr(str(make_k(self.stats[field])).ljust(13))
         else:
             screen.addstr("new interface (gathering)")
         if self.vanished:
@@ -106,6 +118,9 @@ class Ifaces(list):
         list.__init__(self)
         self.sys_path=sys_path
         self.rescan()
+        self.fields=['errors','tx','rx','txp','rxp']
+        self.sortby=1
+        self.firstrun=True
 
     def rescan(self):
 #       map(self.remove,filter(bool, self))
@@ -115,16 +130,34 @@ class Ifaces(list):
             map (self.append, map(lambda i: IF(self.sys_path,i), new_ifaces))
        map(IF.tick,self)
 
-    def dump(self,screen,tick=1):
-        list.sort(self,key=lambda x: x.cmp_keys('rxp'),reverse=True)
+    def dump(self,screen,sort=0,tick=1):
+        self.nextkey(sort)
+        list.sort(self,key=lambda x: x.cmp_keys(self.fields[self.sortby]),reverse=True)
         screen.clear()
-        screen.addstr("iface")
-        for item in ['errors','TX (bytes)', 'RX (bytes)','TX (packets)', 'RX (packets)']:
-            screen.addstr(item.ljust(12))
+        screen.addstr("iface".ljust(13),curses.A_REVERSE)
+        for n,item in enumerate(self.fields):
+            if n == self.sortby:
+                screen.addstr(item.ljust(13),curses.A_BOLD|curses.A_REVERSE)
+            else:
+                screen.addstr(item.ljust(13),curses.A_REVERSE)
         screen.addstr('\n')
         for i in self:
             IF.result(i,screen)
+        if self.firstrun or sort:
+            screen.addstr("\nsorting by: "+self.fields[self.sortby]+". To change use Left/Right arrows\n")
+
+        if self.firstrun:
+            self.firstrun=False
         screen.refresh()
+
+    def nextkey(self,shift):
+        if 0 <= self.sortby+shift < len(self.fields):
+            self.sortby=self.sortby+shift
+        elif self.sortby+shift <0:
+            self.sortby=len(self.fields-1)
+        elif self.sortby+shift >=len(self.fields):
+            self.sortby=0
+
 
 def sleepkey(screen):
     '''
@@ -140,10 +173,17 @@ def main(stdscr):
     stdscr.timeout(1000)
     ifaces=Ifaces()
     while 1:
+        sort=0
         (key,delay)=sleepkey(stdscr)
         if delay < 0.001:
             delay=0.001
-        ifaces.dump(stdscr,tick=delay)
+        if key == curses.KEY_LEFT:
+            sort-=1
+        if key == curses.KEY_RIGHT:
+            sort+=1
+        if key == ord('q'):
+            sys.exit(-1)
+        ifaces.dump(stdscr,tick=delay,sort=sort)
         ifaces.rescan()
 
 if __name__ == "__main__":
