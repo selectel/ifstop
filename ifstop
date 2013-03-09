@@ -174,6 +174,24 @@ def sleepkey(screen):
     after=time.time()
     return (key,after-before)
 
+def ask_delay(screen,olddelay):
+    text="Enter new delay (milliseconds):"
+    screen.addstr(0, 0, text+" "*5)
+    screen.refresh()
+    screen.timeout(-1)
+    curses.echo()
+    i=screen.getstr(0,len(text),5)
+    curses.noecho()
+    try:
+        newdelay=int(i)
+        if newdelay==0:
+            newdelay=1
+    except:
+        newdelay=olddelay
+    screen.timeout(newdelay)
+    return newdelay
+        
+
 def main(stdscr):
     curses.use_default_colors()
     stdscr.timeout(1000)
@@ -189,6 +207,8 @@ def main(stdscr):
             sort+=1
         if key == ord('q'):
             sys.exit(-1)
+        if key == ord('i'):
+            delay=ask_delay(stdscr,delay)
         ifaces.dump(stdscr,tick=delay,sort=sort)
         ifaces.rescan()
 
