@@ -80,10 +80,10 @@ class IF:
         return self.vanished
 
     def result(self,tick=1):
-        print self, '\t',
+        print str(self).ljust(10), '\t',
         if not self.new:
             for field in "errors","tx","tx","txp", "rxp":
-                print "\t", self.stats[field],
+                print str(self.stats[field]).ljust(12),
         else:
             print "new interface (gathering)",
         if self.vanished:
