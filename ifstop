@@ -58,7 +58,7 @@ class Stats(dict):
         return dict((key,self[key]-second[key]) for key in self.iterkeys())
 
 
-class IF():
+class IF:
     def __init__(self, path,name):
         self.path=path
         self.name=name
