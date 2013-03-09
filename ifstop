@@ -147,7 +147,10 @@ class Ifaces(list):
         for i in self:
             IF.result(i,screen)
         if self.firstrun or sort:
-            screen.addstr("\nsorting by: "+self.fields[self.sortby]+". To change use Left/Right arrows\n")
+            try:
+                screen.addstr("\nsorting by: "+self.fields[self.sortby]+". To change use Left/Right arrows\n")
+            except curses.error:
+                pass
 
         if self.firstrun:
             self.firstrun=False
