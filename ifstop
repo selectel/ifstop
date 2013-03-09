@@ -93,15 +93,18 @@ class IF:
         return self.vanished
 
     def result(self,screen,tick=1):
-        screen.addstr(str(self).ljust(13))
-        if not self.new:
-            for field in "errors","tx","rx","txp", "rxp":
-                screen.addstr(str(make_k(self.stats[field])).ljust(13))
-        else:
-            screen.addstr("new interface (gathering)")
-        if self.vanished:
-            screen.addstr("VANISHED")
-        screen.addstr('\n')
+        try:
+            screen.addstr(str(self).ljust(13))
+            if not self.new:
+                for field in "errors","tx","rx","txp", "rxp":
+                    screen.addstr(str(make_k(self.stats[field])).ljust(13))
+            else:
+                screen.addstr("new interface (gathering)")
+            if self.vanished:
+                screen.addstr("VANISHED")
+            screen.addstr('\n')
+        except curses.error:
+            pass
             
     def __str__(self):
         return self.name
