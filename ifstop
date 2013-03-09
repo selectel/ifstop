@@ -126,6 +126,7 @@ class Ifaces(list):
         screen.refresh()
 
 def main(stdscr):
+    curses.use_default_colors()
     ifaces=Ifaces()
     while 1:
         ifaces.dump(stdscr)
