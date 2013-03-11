@@ -160,7 +160,7 @@ class Ifaces(list):
         if 0 <= self.sortby+shift < len(self.fields):
             self.sortby=self.sortby+shift
         elif self.sortby+shift <0:
-            self.sortby=len(self.fields-1)
+            self.sortby=len(self.fields)-1
         elif self.sortby+shift >=len(self.fields):
             self.sortby=0
 
