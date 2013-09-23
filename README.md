@@ -6,3 +6,4 @@ Use Left/Right arrows to change sort order,
 'q' for quit, 
 'i' to change update interval
 
+Licensed under GNU Public License
